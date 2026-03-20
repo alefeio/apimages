@@ -1,0 +1,22 @@
+# Produção (só loopback — use com Nginx + TLS no host):
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+services:
+  apimages:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      BASE_URL: ${BASE_URL:?defina BASE_URL no .env}
+      API_KEY: ${API_KEY:?defina API_KEY no .env}
+      STORAGE_PATH: /data/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      IMAGE_MAX_EDGE_PX: ${IMAGE_MAX_EDGE_PX:-2560}
+      IMAGE_JPEG_QUALITY: ${IMAGE_JPEG_QUALITY:-90}
+      IMAGE_WEBP_QUALITY: ${IMAGE_WEBP_QUALITY:-92}
+    volumes:
+      - apimages_uploads:/data/uploads
+
+volumes:
+  apimages_uploads:
