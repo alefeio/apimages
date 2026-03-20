@@ -1,0 +1,16 @@
+services:
+  apimages:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      API_KEY: ${API_KEY:?defina API_KEY no .env}
+      STORAGE_PATH: /data/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+    volumes:
+      - apimages_uploads:/data/uploads
+
+volumes:
+  apimages_uploads:
