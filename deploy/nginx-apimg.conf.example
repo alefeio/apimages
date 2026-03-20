@@ -1,0 +1,32 @@
+# 1) Copiar para /etc/nginx/sites-available/apimg.com.br
+# 2) sudo ln -sf ... sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx
+# 3) sudo certbot --nginx -d apimg.com.br -d www.apimg.com.br
+#    O Certbot altera este arquivo e adiciona HTTPS + redirecionamento.
+#
+# client_max_body_size >= uploads da API (aqui 20 MB).
+
+upstream apimages_backend {
+    server 127.0.0.1:8000;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name apimg.com.br www.apimg.com.br;
+
+    client_max_body_size 20m;
+    client_body_timeout 120s;
+
+    location / {
+        proxy_pass http://apimages_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}

@@ -72,27 +72,21 @@ Autenticação no upload: header `X-API-Key: <sua chave>` ou `Authorization: Bea
 
 ## DigitalOcean (Droplet)
 
-Fluxo típico:
+Guia completo (DNS, Droplet novo): **[docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md)**. **Só comandos no terminal do Droplet:** **[docs/SETUP_TERMINAL_DROPLET.md](docs/SETUP_TERMINAL_DROPLET.md)**. Exemplo Nginx: `deploy/nginx-apimg.conf.example`.
 
-1. Crie um Droplet (Ubuntu LTS), aponte um domínio ou use o IP.
-2. Instale Docker ou Python 3.12+.
-3. Envie o projeto (git clone, SCP, etc.).
-4. Configure `.env` no servidor com `BASE_URL=https://seu-dominio.com`, `API_KEY=...`, `STORAGE_PATH=/var/lib/apimages` (ou volume persistente).
-5. Rode com Docker ou `uvicorn` atrás de **Nginx** com TLS (Let's Encrypt).
+Resumo:
 
-### Docker no servidor
+1. Droplet Ubuntu + firewall (80, 443, SSH).
+2. Registro **A** de `apimg.com.br` (e opcionalmente `www`) para o IP do Droplet.
+3. Docker + clone do repositório + `.env` com `BASE_URL=https://apimg.com.br` e `API_KEY=...`.
+4. Nginx + `certbot --nginx` para HTTPS.
+5. `docker compose -f docker-compose.prod.yml --env-file .env up -d --build` (API em `127.0.0.1:8000` atrás do Nginx).
+
+### Docker local (desenvolvimento)
 
 ```bash
-docker build -t apimages .
-docker run -d --name apimages --restart unless-stopped \
-  -p 127.0.0.1:8000:8000 \
-  -v apimages_data:/data/uploads \
-  -e BASE_URL=https://img.seudominio.com \
-  -e API_KEY=sua-chave-secreta \
-  apimages
+docker compose up -d --build
 ```
-
-O Nginx faz proxy de `https://img.seudominio.com` para `http://127.0.0.1:8000`.
 
 ### Persistência
 
