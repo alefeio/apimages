@@ -1,4 +1,5 @@
-# Use quando o certificado JÁ existe em /etc/letsencrypt/live/apimg.com.br/
+# Apenas apimg.com.br — não altera outros server_name (Methodus, etc.).
+# Certificado esperado: /etc/letsencrypt/live/apimg.com.br/
 # (ex.: certbot emitiu o cert mas falhou em "Deploying certificate").
 #
 # sudo cp deploy/nginx-apimg.https.conf.example /etc/nginx/sites-available/apimg.com.br

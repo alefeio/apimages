@@ -72,7 +72,7 @@ Autenticação no upload: header `X-API-Key: <sua chave>` ou `Authorization: Bea
 
 ## DigitalOcean (Droplet)
 
-Guia completo (DNS, Droplet novo): **[docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md)**. **Só comandos no terminal do Droplet:** **[docs/SETUP_TERMINAL_DROPLET.md](docs/SETUP_TERMINAL_DROPLET.md)**. Exemplo Nginx: `deploy/nginx-apimg.conf.example`.
+Guia completo (DNS, Droplet novo): **[docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md)**. **Só comandos no terminal do Droplet:** **[docs/SETUP_TERMINAL_DROPLET.md](docs/SETUP_TERMINAL_DROPLET.md)**. Exemplo Nginx: `deploy/nginx-apimg.conf.example` e `deploy/nginx-apimg.https.conf.example`. **Mesmo servidor que outros domínios:** `deploy/NGINX_SERVIDOR_COMPARTILHADO.md`.
 
 Resumo:
 

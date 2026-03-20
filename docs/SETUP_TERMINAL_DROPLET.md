@@ -78,12 +78,15 @@ Salve: `Ctrl+O`, Enter, `Ctrl+X`.
 
 ## 5) Nginx (proxy para a API)
 
+**Servidor já com outros domínios:** só adicione o site do Apimg; **não** apague nem edite os ficheiros do Methodus/outros. Ver [deploy/NGINX_SERVIDOR_COMPARTILHADO.md](../deploy/NGINX_SERVIDOR_COMPARTILHADO.md).
+
 ```bash
 sudo cp /opt/apimages/deploy/nginx-apimg.conf.example /etc/nginx/sites-available/apimg.com.br
 sudo ln -sf /etc/nginx/sites-available/apimg.com.br /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+*(Remover `sites-enabled/default` só se tiver a certeza de que nenhum site depende dele — em servidores partilhados costuma deixar como está.)*
 
 Se não usar `www`, edite o arquivo e remova `www.apimg.com.br` do `server_name` antes do `reload`.
 
@@ -170,6 +173,8 @@ O Let’s Encrypt já guardou o cert em `/etc/letsencrypt/live/apimg.com.br/`, m
 
 4. Opcional: `sudo certbot install --cert-name apimg.com.br` (depois do `server_name` correto).
 
+**Instalação do Apimg não exige** remover links, certificados ou ficheiros de outros domínios no mesmo servidor. Avisos `conflicting server name` entre ficheiros **do mesmo** domínio (ex.: vários `.bak` com o mesmo `api.methodusexercicios…`) são à parte; o `apimg.com.br` usa `server_name` diferente e continua a funcionar.
+
 ---
 
-Mais contexto (DNS, firewall na DO): [DEPLOY_DIGITALOCEAN.md](DEPLOY_DIGITALOCEAN.md).
+Mais contexto (DNS, firewall na DO): [DEPLOY_DIGITALOCEAN.md](DEPLOY_DIGITALOCEAN.md). **Vários sites no mesmo Nginx:** [deploy/NGINX_SERVIDOR_COMPARTILHADO.md](../deploy/NGINX_SERVIDOR_COMPARTILHADO.md).
