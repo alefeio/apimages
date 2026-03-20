@@ -143,4 +143,33 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
 ---
 
+## Certificado OK, mas “Could not install certificate”
+
+O Let’s Encrypt já guardou o cert em `/etc/letsencrypt/live/apimg.com.br/`, mas o plugin **nginx** não encontrou um `server_name` igual ao domínio (site não criado, nome errado ou não está em `sites-enabled`).
+
+1. Copie o exemplo **com HTTPS** (aponta para os ficheiros do certificado):
+
+   ```bash
+   cd ~/apimages/apimages
+   git pull
+   sudo cp deploy/nginx-apimg.https.conf.example /etc/nginx/sites-available/apimg.com.br
+   sudo ln -sf /etc/nginx/sites-available/apimg.com.br /etc/nginx/sites-enabled/
+   ```
+
+2. Teste e recarregue:
+
+   ```bash
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+3. Se `nginx -t` falhar em **`ssl_dhparam`**, comente a linha `ssl_dhparam` no ficheiro **ou** gere o ficheiro (se existir `options-ssl-nginx.conf`, o `ssl_dhparams` às vezes falta):
+
+   ```bash
+   sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
+   ```
+
+4. Opcional: `sudo certbot install --cert-name apimg.com.br` (depois do `server_name` correto).
+
+---
+
 Mais contexto (DNS, firewall na DO): [DEPLOY_DIGITALOCEAN.md](DEPLOY_DIGITALOCEAN.md).
