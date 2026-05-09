@@ -37,7 +37,9 @@ for _ext, _mime in _EXTRA_MIMES:
 
 app = FastAPI(
     title="Apimages",
-    description="API de hospedagem de arquivos (imagens, PDF, Office, texto; upload autenticado, leitura pública).",
+    description="API de hospedagem de arquivos: imagens (com otimização), documentos listados e "
+    "qualquer outro tipo (vídeo, áudio, zip, etc.) aceito como upload genérico dentro de MAX_UPLOAD_BYTES. "
+    "Upload autenticado; leitura pública em GET /i/{public_id}.",
     version="1.0.0",
 )
 
@@ -61,7 +63,9 @@ def health() -> HealthResponse:
 @app.post("/v1/upload", response_model=UploadResponse)
 async def upload_file(
     _: None = Depends(require_api_key),
-    file: UploadFile = File(..., description="Arquivo (imagem, PDF, Office, CSV, TXT, etc.)"),
+    file: UploadFile = File(
+        ..., description="Imagem, documento ou qualquer arquivo (vídeo, áudio, binário); Content-Type ou nome do arquivo definem a extensão."
+    ),
 ) -> UploadResponse:
     public_id, fmt, width, height, size = await save_upload(file)
     base = settings.base_url.rstrip("/")

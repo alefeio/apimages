@@ -1,4 +1,6 @@
 import io
+import mimetypes
+import re
 import uuid
 import zipfile
 from pathlib import Path
@@ -35,6 +37,41 @@ _OLE_TYPES = frozenset(
         "application/vnd.ms-powerpoint",
     },
 )
+
+# Quando `mimetypes.guess_extension` falha (SO / MIME incomum)
+_FALLBACK_EXT: dict[str, str] = {
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
+    "video/x-matroska": ".mkv",
+    "video/x-msvideo": ".avi",
+    "video/ogg": ".ogv",
+    "video/mpeg": ".mpeg",
+    "audio/mpeg": ".mp3",
+    "audio/wav": ".wav",
+    "audio/ogg": ".oga",
+    "application/zip": ".zip",
+    "application/gzip": ".gz",
+    "application/x-7z-compressed": ".7z",
+    "application/x-rar-compressed": ".rar",
+}
+
+_SAFE_FILENAME_EXT = re.compile(r"^\.[a-z0-9]{1,15}$")
+
+
+def _arbitrary_extension(mime: str, filename: str | None) -> str:
+    """Extensão para tipos fora da lista estrita (vídeo, binários, etc.)."""
+    g = mimetypes.guess_extension(mime)
+    if g and g.startswith(".") and _SAFE_FILENAME_EXT.match(g.lower()):
+        return g.lower()
+    fb = _FALLBACK_EXT.get(mime)
+    if fb and _SAFE_FILENAME_EXT.match(fb.lower()):
+        return fb.lower()
+    if filename:
+        suf = Path(Path(filename).name).suffix.lower()
+        if suf and _SAFE_FILENAME_EXT.match(suf):
+            return suf
+    return ".bin"
 
 
 def _normalize_mime(raw: str | None) -> str | None:
@@ -228,12 +265,7 @@ def _save_raster_image(body: bytes, content_type: str, dest: Path) -> tuple[int,
 
 
 async def save_upload(file: UploadFile) -> tuple[str, str, int | None, int | None, int]:
-    mime = _normalize_mime(file.content_type)
-    if not mime or mime not in settings.allowed_mime:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Tipo não suportado. Veja a documentação em /docs ou o mapeamento em allowed_mime.",
-        )
+    mime = _normalize_mime(file.content_type) or "application/octet-stream"
 
     body = await file.read()
     if len(body) > settings.max_upload_bytes:
@@ -247,7 +279,17 @@ async def save_upload(file: UploadFile) -> tuple[str, str, int | None, int | Non
             detail="Arquivo vazio",
         )
 
-    ext = settings.allowed_mime[mime]
+    strict = settings.allowed_mime
+    if mime not in strict:
+        ext = _arbitrary_extension(mime, file.filename)
+        public_id = f"{uuid.uuid4().hex}{ext}"
+        storage = _ensure_storage()
+        dest = storage / public_id
+        dest.write_bytes(body)
+        label = ext.lstrip(".").upper() or "BIN"
+        return public_id, label, None, None, len(body)
+
+    ext = strict[mime]
     public_id = f"{uuid.uuid4().hex}{ext}"
     storage = _ensure_storage()
     dest = storage / public_id
