@@ -3,6 +3,7 @@ import mimetypes
 import re
 import uuid
 import zipfile
+import zlib
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
@@ -209,15 +210,33 @@ def _encode_raster(work: Image.Image, content_type: str) -> bytes:
     return buf.getvalue()
 
 
-def _save_raster_image(body: bytes, content_type: str, dest: Path) -> tuple[int, int, int]:
+_RASTER_DECODE_ERRORS = (UnidentifiedImageError, SyntaxError, OSError, zlib.error)
+
+
+def _invalid_raster() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Imagem corrompida ou inválida",
+    )
+
+
+def _open_verified_raster(body: bytes) -> Image.Image:
+    """Abre e decodifica a imagem. Erro de arquivo vira 400; falha de disco fica de fora."""
     try:
-        Image.open(io.BytesIO(body)).verify()
-    except UnidentifiedImageError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Imagem corrompida ou inválida",
-        )
-    img = Image.open(io.BytesIO(body))
+        with Image.open(io.BytesIO(body)) as probe:
+            probe.verify()
+    except _RASTER_DECODE_ERRORS:
+        raise _invalid_raster() from None
+    try:
+        img = Image.open(io.BytesIO(body))
+        img.load()
+    except _RASTER_DECODE_ERRORS:
+        raise _invalid_raster() from None
+    return img
+
+
+def _save_raster_image(body: bytes, content_type: str, dest: Path) -> tuple[int, int, int]:
+    img = _open_verified_raster(body)
     fmt = (img.format or "JPEG").upper()
     if content_type == "image/jpeg" and fmt in ("JPEG", "MPO"):
         pass
@@ -238,7 +257,10 @@ def _save_raster_image(body: bytes, content_type: str, dest: Path) -> tuple[int,
         w, h = img.size
         return w, h, len(body)
 
-    work = ImageOps.exif_transpose(img)
+    try:
+        work = ImageOps.exif_transpose(img)
+    except _RASTER_DECODE_ERRORS:
+        raise _invalid_raster() from None
     w, h = work.size
     max_edge = settings.image_max_edge_px
     need_resize = max_edge > 0 and max(w, h) > max_edge
