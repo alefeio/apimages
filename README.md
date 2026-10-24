@@ -62,6 +62,7 @@ A resposta JSON inclui `url`; abra essa URL no navegador para conferir.
 |----------|-----------|
 | `BASE_URL` | URL pública da API (sem `/` no final). Usada para montar o campo `url` na resposta do upload. |
 | `API_KEY` | Chave obrigatória para upload. |
+| `API_KEY_SECONDARY` | Opcional. Segunda chave aceita só durante uma rotação. Vazia por padrão. |
 | `STORAGE_PATH` | Diretório dos arquivos (padrão `./data/uploads`). |
 | `MAX_UPLOAD_BYTES` | Tamanho máximo em bytes (padrão 10485760 = 10 MB). Aumente se precisar de PDFs ou planilhas grandes. |
 | `IMAGE_MAX_EDGE_PX` | Maior lado permitido após otimização (padrão 2560). `0` desativa o redimensionamento. |

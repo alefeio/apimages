@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     base_url: str = "http://localhost:8000"
     api_key: str = ""
+    api_key_secondary: str = ""
     storage_path: Path = Path("./data/uploads")
     max_upload_bytes: int = 10 * 1024 * 1024
 

@@ -35,6 +35,7 @@ def _jpeg() -> bytes:
 @pytest.fixture
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(settings, "api_key", API_KEY)
+    monkeypatch.setattr(settings, "api_key_secondary", "")
     monkeypatch.setattr(settings, "storage_path", tmp_path)
     monkeypatch.setattr(settings, "base_url", "https://apimg.com.br")
     return TestClient(app, raise_server_exceptions=False)
