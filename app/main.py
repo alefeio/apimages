@@ -6,8 +6,8 @@ from fastapi.responses import FileResponse
 
 from app.auth import require_api_key
 from app.config import settings
-from app.schemas import HealthResponse, UploadResponse
-from app.storage_service import file_path, save_upload
+from app.schemas import DeleteResponse, HealthResponse, UploadResponse
+from app.storage_service import delete_stored_file, file_path, save_upload
 
 _EXTRA_MIMES: list[tuple[str, str]] = [
     (".pdf", "application/pdf"),
@@ -39,7 +39,8 @@ app = FastAPI(
     title="Apimages",
     description="API de hospedagem de arquivos: imagens (com otimização), documentos listados e "
     "qualquer outro tipo (vídeo, áudio, zip, etc.) aceito como upload genérico dentro de MAX_UPLOAD_BYTES. "
-    "Upload autenticado; leitura pública em GET /i/{public_id}.",
+    "Upload e exclusão autenticados; leitura pública em GET /i/{public_id}. "
+    "DELETE /v1/images/{public_id} remove o arquivo físico. Se ele já não existir, responde 200 com deleted=false.",
     version="1.0.0",
 )
 
@@ -91,6 +92,21 @@ def get_file(public_id: str):
     return FileResponse(path, media_type=media_type, filename=path.name)
 
 
+@app.delete("/v1/images/{public_id}", response_model=DeleteResponse)
+def delete_image(
+    public_id: str,
+    _: None = Depends(require_api_key),
+) -> DeleteResponse:
+    """Exclui o arquivo físico identificado por public_id.
+
+    O identificador precisa ser o gerado no upload (32 hexadecimais e uma extensão).
+    URL, caminho absoluto e path traversal são recusados. Ausência do arquivo é
+    idempotente: HTTP 200 e deleted=false.
+    """
+    deleted = delete_stored_file(public_id)
+    return DeleteResponse(public_id=public_id, deleted=deleted)
+
+
 @app.get("/")
 def root():
     return {
@@ -98,4 +114,5 @@ def root():
         "docs": "/docs",
         "upload": "POST /v1/upload (header X-API-Key)",
         "serve": "GET /i/{public_id}",
+        "delete": "DELETE /v1/images/{public_id} (header X-API-Key)",
     }

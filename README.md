@@ -6,6 +6,7 @@ API REST para hospedar **imagens e documentos**: o cliente faz **upload** com um
 
 - `POST /v1/upload` — envio multipart; resposta com `url`, `public_id`, dimensões (só para imagens raster), formato e tamanho.
 - `GET /i/{public_id}` — entrega do arquivo (sem autenticação, estilo CDN).
+- `DELETE /v1/images/{public_id}` — exclusão física autenticada. Só aceita o `public_id` gerado no upload.
 - Limite de tamanho configurável (`MAX_UPLOAD_BYTES`).
 
 ### Tipos aceitos (Content-Type)
@@ -56,12 +57,28 @@ curl -X POST "http://localhost:8000/v1/upload" ^
 
 A resposta JSON inclui `url`; abra essa URL no navegador para conferir.
 
+### Exclusão
+
+```bash
+curl -X DELETE "http://localhost:8000/v1/images/PUBLIC_ID" ^
+  -H "X-API-Key: SUA_CHAVE"
+```
+
+Contrato oficial: `DELETE /v1/images/{public_id}`.
+
+- Autenticação igual à do upload: `X-API-Key` ou `Authorization: Bearer`.
+- O parâmetro é somente o `public_id` (32 caracteres hexadecimais e uma extensão, como `abcdef...png`). URL completa, caminho absoluto e segmentos como `..`, `/` ou `\` são recusados com HTTP 400.
+- Se o arquivo existia e foi removido do disco: HTTP 200 e `{"public_id","deleted":true}`.
+- Se o arquivo já não existe: HTTP 200 e `{"public_id","deleted":false}`. Repetir a exclusão não é erro.
+- Depois da exclusão, `GET /i/{public_id}` responde 404.
+- Uma chave válida pode excluir qualquer `public_id` conhecido. Ainda não há separação de arquivos por consumidor.
+
 ## Variáveis de ambiente
 
 | Variável | Descrição |
 |----------|-----------|
 | `BASE_URL` | URL pública da API (sem `/` no final). Usada para montar o campo `url` na resposta do upload. |
-| `API_KEY` | Chave obrigatória para upload. |
+| `API_KEY` | Chave obrigatória para upload e exclusão. |
 | `API_KEY_SECONDARY` | Opcional. Segunda chave aceita só durante uma rotação. Vazia por padrão. |
 | `STORAGE_PATH` | Diretório dos arquivos (padrão `./data/uploads`). |
 | `MAX_UPLOAD_BYTES` | Tamanho máximo em bytes (padrão 10485760 = 10 MB). Aumente se precisar de PDFs ou planilhas grandes. |

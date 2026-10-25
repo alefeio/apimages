@@ -17,3 +17,11 @@ class UploadResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     storage: str
+
+
+class DeleteResponse(BaseModel):
+    public_id: str = Field(..., description="Identificador informado na exclusão")
+    deleted: bool = Field(
+        ...,
+        description="True se o arquivo existia e foi removido do disco. False se já não existia.",
+    )

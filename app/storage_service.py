@@ -58,6 +58,7 @@ _FALLBACK_EXT: dict[str, str] = {
 }
 
 _SAFE_FILENAME_EXT = re.compile(r"^\.[a-z0-9]{1,15}$")
+_PUBLIC_ID_RE = re.compile(r"^[0-9a-f]{32}\.[a-z0-9]{1,15}$")
 
 
 def _arbitrary_extension(mime: str, filename: str | None) -> str:
@@ -350,15 +351,73 @@ async def save_upload(file: UploadFile) -> tuple[str, str, int | None, int | Non
     return public_id, label, width, height, out_size
 
 
+def public_id_is_safe(public_id: str) -> bool:
+    """Aceita só o identificador gerado pela API: 32 hex + extensão curta."""
+    if (
+        not isinstance(public_id, str)
+        or "\x00" in public_id
+        or ".." in public_id
+        or "/" in public_id
+        or "\\" in public_id
+        or ":" in public_id
+    ):
+        return False
+    return _PUBLIC_ID_RE.fullmatch(public_id) is not None
+
+
+def validate_public_id(public_id: str) -> str:
+    if not public_id_is_safe(public_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Identificador inválido",
+        )
+    return public_id
+
+
+def _storage_candidate(public_id: str) -> Path:
+    """Caminho canônico dentro do storage. Recusa qualquer escape da raiz."""
+    storage = _ensure_storage().resolve()
+    resolved = (storage / public_id).resolve()
+    try:
+        resolved.relative_to(storage)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Identificador inválido",
+        ) from None
+    if resolved.parent != storage:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Identificador inválido",
+        )
+    return resolved
+
+
 def file_path(public_id: str) -> Path | None:
-    if ".." in public_id or "/" in public_id or "\\" in public_id:
-        return None
-    storage = _ensure_storage()
-    p = storage / public_id
-    if not p.is_file():
+    if not public_id_is_safe(public_id):
         return None
     try:
-        p.resolve().relative_to(storage.resolve())
-    except ValueError:
+        resolved = _storage_candidate(public_id)
+    except HTTPException:
         return None
-    return p
+    if not resolved.is_file():
+        return None
+    return resolved
+
+
+def delete_stored_file(public_id: str) -> bool:
+    """Remove o arquivo físico. Ausência vira False; falha de disco não é sucesso."""
+    validate_public_id(public_id)
+    resolved = _storage_candidate(public_id)
+    if not resolved.is_file():
+        return False
+    try:
+        resolved.unlink()
+    except FileNotFoundError:
+        return False
+    except OSError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Não foi possível excluir o arquivo",
+        ) from None
+    return True
